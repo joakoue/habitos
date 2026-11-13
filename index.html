@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Hábitos · Competencia</title>
+<meta name="theme-color" content="#ff5a36">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hábitos">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#111218);--card:light-dark(#f4f4f7,#1b1c25);--line:light-dark(#e4e4eb,#2b2d39);--ink:light-dark(#15161d,#f1f1f5);--mute:light-dark(#5f6177,#a3a5b8);--a:#ff5a36;--b:#2f6bff;--err:light-dark(#c4161c,#ff7b7f)}
+@supports not (color:light-dark(#000,#fff)){:root{--bg:#fff;--card:#f4f4f7;--line:#e4e4eb;--ink:#15161d;--mute:#5f6177;--err:#c4161c}@media(prefers-color-scheme:dark){:root{--bg:#111218;--card:#1b1c25;--line:#2b2d39;--ink:#f1f1f5;--mute:#a3a5b8;--err:#ff7b7f}}}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Archivo,system-ui,sans-serif;overflow-x:clip;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:640px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) calc(72px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+h1{font-size:15px;font-weight:600;color:var(--mute);margin:4px 0 12px}
+h2{font-size:clamp(30px,8vw,40px);line-height:1.05;margin:24px 0 8px;text-wrap:balance}
+.board{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border-radius:20px;overflow:hidden;color:#fff;box-shadow:0 10px 30px -14px rgba(0,0,0,.45)}
+.side{padding:18px 16px 16px}
+.side.a{background:var(--a)}.side.b{background:var(--b);text-align:right}
+.nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pts{font-weight:800;font-size:clamp(44px,14vw,72px);line-height:1;margin:6px 0 4px;font-variant-numeric:tabular-nums}
+.sub{font-size:13px;opacity:.92}
+.crown{display:inline-block;background:#fff;color:#15161d;font-size:13px;font-weight:800;border-radius:99px;padding:1px 9px;margin-top:8px}
+.lead{margin:12px 2px 4px;font-weight:600;text-wrap:balance}
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;background:var(--card);padding:5px;border-radius:14px;margin:16px 0 8px;position:sticky;top:max(8px,env(safe-area-inset-top));z-index:2}
+.tabs button,.seg button,.btn,.link{font:inherit;font-weight:600;border:0;border-radius:10px;min-height:44px;background:transparent;color:var(--ink);cursor:pointer}
+.tabs button.on,.seg button.on{background:var(--bg);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--b);outline-offset:2px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--card);padding:5px;border-radius:14px;margin:8px 0 14px}
+.prog{display:flex;justify-content:space-between;align-items:baseline;font-weight:600;gap:8px}
+.prog b{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums}
+.bar{height:10px;border-radius:99px;background:var(--card);overflow:hidden;margin:6px 0 4px}
+.bar i{display:block;height:100%;background:var(--me);border-radius:99px;transition:width .3s}
+h3{font-size:16px;margin:24px 0 2px}
+.row{display:flex;align-items:center;gap:12px;padding:10px 2px;border-bottom:1px solid var(--line);min-height:52px;cursor:pointer}
+.row input{appearance:none;-webkit-appearance:none;width:26px;height:26px;border:2px solid var(--mute);border-radius:8px;flex:none;display:grid;place-content:center;margin:0;cursor:pointer;background:transparent}
+.row input:checked{background:var(--me);border-color:var(--me)}
+.row input:checked::after{content:"";width:7px;height:13px;border:solid #fff;border-width:0 3px 3px 0;transform:translateY(-1px) rotate(45deg)}
+.row span{flex:1}
+.tag{font-size:13px;color:var(--mute);white-space:nowrap}
+.tag.hot{color:var(--me);font-weight:700}
+.card{background:var(--card);border-radius:16px;padding:18px;margin:12px 0}
+.card p{margin:0 0 10px}
+label.f{display:block;font-weight:600;font-size:14px}
+input[type=text],input[type=email],input[type=password]{font:inherit;font-size:16px;width:100%;min-height:48px;padding:10px 14px;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:var(--ink);margin:6px 0 12px}
+.btn{background:var(--ink);color:var(--bg);padding:0 20px;width:100%}
+.btn.a{background:var(--a);color:#fff}.btn.b{background:var(--b);color:#fff}
+.btn:disabled{opacity:.5}
+.link{color:var(--b);padding:0 4px;min-height:44px;background:none;text-decoration:underline}
+.msg{font-size:14px;margin:0 0 12px}.msg.err{color:var(--err)}
+.mhead{display:flex;align-items:center;justify-content:space-between;margin:8px 0}
+.mhead b{font-size:20px;text-transform:capitalize}
+.mhead button{width:44px;height:44px;border-radius:12px;border:0;background:var(--card);color:var(--ink);font:inherit;font-size:22px;cursor:pointer}
+.mhead button:disabled{opacity:.3;cursor:default}
+table{width:100%;border-collapse:collapse;margin:8px 0}
+th,td{padding:10px 6px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+th{font-size:14px;color:var(--mute);font-weight:600}
+tr.tot td{font-weight:800;font-size:18px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.chart{display:flex;align-items:flex-end;gap:2px;height:150px;border-bottom:1px solid var(--line);margin-top:14px}
+.chart .d{flex:1;display:flex;align-items:flex-end;gap:1px;height:100%}
+.chart .d i{flex:1;border-radius:3px 3px 0 0;min-height:2px}
+.days{display:flex;gap:2px;font-size:13px;color:var(--mute)}
+.days span{flex:1;text-align:center;white-space:nowrap}
+.legend{display:flex;gap:16px;font-size:14px;color:var(--mute);margin-top:8px;flex-wrap:wrap}
+.hist{list-style:none;padding:0;margin:0}
+.hist li{display:flex;justify-content:space-between;gap:12px;padding:12px 2px;border-bottom:1px solid var(--line)}
+.hist li b{text-transform:capitalize}
+.note{font-size:14px;color:var(--mute)}
+.code{font-weight:800;font-size:36px;letter-spacing:.12em;font-variant-numeric:tabular-nums;margin:4px 0 10px}
+.status{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;max-width:92vw;display:none;z-index:5}
+.status.on{display:block}
+.rules li{margin-bottom:8px}
+.hero{display:grid;grid-template-columns:1fr 1fr;border-radius:20px;overflow:hidden;color:#fff;margin:8px 0 4px}
+.hero div{padding:22px 16px;font-weight:800;font-size:clamp(28px,9vw,44px);line-height:1}
+.hero div:first-child{background:var(--a)}.hero div:last-child{background:var(--b);text-align:right}
+@media(prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap" id="root"><p class="note">Cargando…</p></div>
+<div class="status" id="status" role="status"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+{
+const CATS=[
+["Sueño y rutina",["Levantarse a las 7:00 o antes","Acostarse antes de las 00:00","Dormir 7 horas o más","No usar el celular los primeros 30 min del día","No usar pantallas 30 min antes de dormir","Hacer la cama al levantarse"]],
+["Alimentación: evitar",["Sin pan","Sin frituras","Sin dulces ni postres","Sin bebidas azucaradas ni jugos en caja","Sin comida rápida ni delivery","Sin snacks procesados","No comer después de las 21:00"]],
+["Alimentación: sumar",["Tomar 2 litros de agua","Comer 5 porciones de frutas o verduras","Tomar desayuno","Cocinar en casa","Comer proteína en cada comida"]],
+["Actividad física",["Hacer deporte o ir al gimnasio (30+ min)","Caminar 10.000 pasos","Estirar o hacer yoga (10+ min)","Usar escaleras en vez de ascensor","Ir caminando o en bici en vez de en auto"]],
+["Mente y bienestar",["Meditar o respirar 10 min","Escribir un diario o 3 agradecimientos","Leer 20 páginas o 20 min","Tomar sol o estar al aire libre 15 min"]],
+["Vida digital",["Menos de 2 horas de redes sociales","Sin series ni videos antes de dormir","Celular fuera de la mesa al comer"]],
+["Vicios",["Sin alcohol","Sin cigarro ni vape","Máximo 2 cafés"]],
+["Desarrollo personal",["Estudiar o aprender algo 30 min","Avanzar en un proyecto personal","Planificar el día siguiente","Cumplir la tarea más importante del día"]],
+["Hogar, finanzas y relaciones",["Dejar la cocina limpia antes de dormir","Ordenar 10 min","No hacer compras impulsivas","Anotar los gastos del día","Llamar o visitar a un familiar o amigo","Hacer algo amable por otra persona"]]
+];
+const H=[];CATS.forEach(([c,l])=>l.forEach(t=>H.push({id:'h'+(H.length+1),t,c})));
+const N=H.length,VALID=new Set(H.map(h=>h.id)),BONUS=5,COL=['var(--a)','var(--b)'];
+const MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const $=s=>document.querySelector(s);
+const pad=n=>String(n).padStart(2,'0');
+const key=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const parse=k=>{const[y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d)};
+const addD=(k,n)=>{const d=parse(k);d.setDate(d.getDate()+n);return key(d)};
+const today=()=>key(new Date());
+const mName=ym=>{const[y,m]=ym.split('-').map(Number);return MES[m-1]+' '+y};
+const addM=(ym,n)=>{const[y,m]=ym.split('-').map(Number);const d=new Date(y,m-1+n,1);return d.getFullYear()+'-'+pad(d.getMonth()+1)};
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const CFG=window.HABITOS_CONFIG||{};
+let sb=null;
+try{sb=window.supabase.createClient(CFG.url,CFG.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}})}catch(e){}
+
+let screen='loading',authMode='login',authMsg='',authErr=false,setupErr='';
+let me=null,bootedFor=null,comp=null,players=[],logs={},dirty={},chan=null;
+let tab='hoy',day='hoy',ym=today().slice(0,7),lastDay=today();
+
+const nameOf=(p,i)=>(p&&p.alias)||('Jugador '+(i+1));
+const mine=()=>players.find(p=>p.id===me);
+function doneOn(p,k){
+  if(p.id===me&&dirty[k])return dirty[k];
+  const a=(logs[p.id]||{})[k];return Array.isArray(a)?a.filter(x=>VALID.has(x)):[];
+}
+function streakAt(p,id,k){let s=0;while(s<400&&doneOn(p,k).includes(id)){s++;k=addD(k,-1)}return s}
+function stats(p,m){
+  const[y,mo]=m.split('-').map(Number),last=new Date(y,mo,0).getDate(),t=today(),dates=[];
+  for(let d=1;d<=last;d++){const k=m+'-'+pad(d);if(k>t)break;dates.push(k)}
+  const r={base:0,bonus:0,total:0,streaks:0,perfect:0,daily:[],days:last};
+  if(!p)return r;
+  const sets=dates.map(k=>new Set(doneOn(p,k)));
+  sets.forEach(s=>{r.base+=s.size;r.daily.push(s.size);if(s.size===N)r.perfect++});
+  if(dates.length)H.forEach(h=>{
+    let s=streakAt(p,h.id,addD(m+'-01',-1));
+    sets.forEach(set=>{if(set.has(h.id)){s++;if(s%7===0){r.bonus+=BONUS;r.streaks++}}else s=0});
+  });
+  r.total=r.base+r.bonus;return r;
+}
+function cmp(a,b){return (a.total-b.total)||(a.streaks-b.streaks)||(a.perfect-b.perfect)}
+function verdict(m){
+  if(players.length<2)return null;
+  const s=players.map(p=>stats(p,m)),c=cmp(s[0],s[1]);
+  return{s,w:c>0?0:c<0?1:-1};
+}
+
+/* ---------- vistas ---------- */
+function vAuth(){
+  const reg=authMode==='signup',rec=authMode==='reset',np=authMode==='newpass';
+  let h='<h1>Competencia de buenos hábitos</h1><div class="hero"><div>Tú</div><div>Rival</div></div>';
+  h+='<h2>'+(np?'Elige una nueva contraseña':rec?'Recupera tu contraseña':reg?'Crea tu cuenta':'Ingresa a tu cuenta')+'</h2>';
+  h+='<form class="card" id="authf">'+(authMsg?'<p class="msg'+(authErr?' err':'')+'">'+esc(authMsg)+'</p>':'');
+  if(!np)h+='<label class="f" for="em">Correo</label><input type="email" id="em" autocomplete="email" required>';
+  if(!rec)h+='<label class="f" for="pw">Contraseña</label><input type="password" id="pw" minlength="6" autocomplete="'+(reg||np?'new-password':'current-password')+'" required>';
+  h+='<button class="btn a" type="submit">'+(np?'Guardar contraseña':rec?'Enviar correo':reg?'Crear cuenta':'Ingresar')+'</button></form>';
+  if(!np)h+='<p>'+(reg||rec?'<button class="link" data-m="login">Ya tengo cuenta: ingresar</button>':'<button class="link" data-m="signup">No tengo cuenta: registrarme</button><br><button class="link" data-m="reset">Olvidé mi contraseña</button>')+'</p>';
+  return h;
+}
+function vSetup(){
+  let h='<h1>Competencia de buenos hábitos</h1><h2>Empieza una competencia</h2>';
+  if(setupErr)h+='<p class="msg err">'+esc(setupErr)+'</p>';
+  h+='<form class="card" id="createf"><p><b>Crear una competencia nueva</b></p><p class="note">Te daremos un código para invitar a tu rival.</p><label class="f" for="ca">Tu nombre en el marcador</label><input type="text" id="ca" maxlength="24" required autocomplete="nickname"><button class="btn a" type="submit">Crear competencia</button></form>';
+  h+='<form class="card" id="joinf"><p><b>Unirme con un código</b></p><p class="note">Pídele el código a quien creó la competencia.</p><label class="f" for="jc">Código</label><input type="text" id="jc" maxlength="6" required autocapitalize="characters" autocomplete="off" style="text-transform:uppercase;letter-spacing:.1em"><label class="f" for="ja">Tu nombre en el marcador</label><input type="text" id="ja" maxlength="24" required autocomplete="nickname"><button class="btn b" type="submit">Unirme</button></form>';
+  h+='<p><button class="link" id="logout">Cerrar sesión</button></p>';
+  return h;
+}
+function vBoard(){
+  const cur=today().slice(0,7),v=verdict(cur);
+  let h='<h1>'+esc(comp?comp.name:'Competencia')+' · '+mName(cur)+'</h1><section class="board" aria-label="Marcador del mes">';
+  [0,1].forEach(i=>{
+    const p=players[i],s=stats(p,cur);
+    h+='<div class="side '+'ab'[i]+'"><div class="nm">'+esc(p?nameOf(p,i):'Esperando rival')+'</div><div class="pts">'+(p?s.total:'–')+'</div><div class="sub">'+(p?s.base+' hábitos · +'+s.bonus+' bonus':'Comparte el código')+'</div>'+(v&&v.w===i?'<span class="crown">Va ganando</span>':'')+'</div>';
+  });
+  h+='</section><div class="lead">';
+  if(!v)h+='Invita a tu rival con el código <b>'+esc(comp?comp.code:'')+'</b> (lo encuentras en Reglas).';
+  else if(v.w<0)h+='Empate total este mes.';
+  else{const d=v.s[v.w].total-v.s[1-v.w].total;h+=esc(nameOf(players[v.w],v.w))+(d>0?' lidera por '+d+(d===1?' punto.':' puntos.'):' gana por desempate.')}
+  h+='</div><nav class="tabs" id="tabs">'+[['hoy','Hoy'],['mes','Marcador'],['reglas','Reglas']].map(([t,l])=>'<button data-t="'+t+'" class="'+(tab===t?'on':'')+'">'+l+'</button>').join('')+'</nav>';
+  return h;
+}
+function curKey(){return day==='hoy'?today():addD(today(),-1)}
+function vHoy(){
+  const p=mine();if(!p)return '<div class="card"><p>Cargando…</p></div>';
+  const i=players.indexOf(p),k=curKey(),done=new Set(doneOn(p,k)),n=done.size,dt=parse(k);
+  let h='<div style="--me:'+COL[i]+'"><div class="seg" id="seg"><button data-d="hoy" class="'+(day==='hoy'?'on':'')+'">Hoy</button><button data-d="ayer" class="'+(day==='ayer'?'on':'')+'">Ayer</button></div>';
+  h+='<div class="prog"><span>'+(day==='hoy'?'Hoy':'Ayer')+', '+dt.getDate()+' de '+MES[dt.getMonth()]+'</span><span><b>'+n+'</b> / '+N+'</span></div><div class="bar"><i style="width:'+(n/N*100)+'%"></i></div>';
+  h+='<p class="note">Puedes marcar o corregir hoy y ayer.</p>';
+  CATS.forEach(([c])=>{
+    h+='<h3>'+esc(c)+'</h3>';
+    H.filter(x=>x.c===c).forEach(x=>{
+      const on=done.has(x.id),st=on?streakAt(p,x.id,k):streakAt(p,x.id,addD(k,-1)),hit=on&&st%7===0;
+      const tag=st>=2?'<span class="tag'+(hit?' hot':'')+'">racha '+st+(hit?' · +5':'')+'</span>':'';
+      h+='<label class="row"><input type="checkbox" data-h="'+x.id+'"'+(on?' checked':'')+'><span>'+esc(x.t)+'</span>'+tag+'</label>';
+    });
+  });
+  return h+'</div>';
+}
+function vMes(){
+  const cur=today().slice(0,7),v=verdict(ym);
+  let h='<div class="mhead"><button id="prev" aria-label="Mes anterior">‹</button><b>'+mName(ym)+'</b><button id="next" aria-label="Mes siguiente"'+(ym>=cur?' disabled':'')+'>›</button></div>';
+  const S=[0,1].map(i=>stats(players[i],ym));
+  if(v)h+='<div class="card"><p><b>'+(v.w<0?'Empate total':(ym<cur?'Ganador: ':'Va ganando: ')+esc(nameOf(players[v.w],v.w)))+'</b></p><p class="note">Desempate: más rachas de 7 días y luego más días perfectos.</p></div>';
+  const rows=[['Puntos por hábitos','base'],['Bonus por racha','bonus'],['Rachas de 7 días','streaks'],['Días perfectos ('+N+'/'+N+')','perfect']];
+  h+='<table><thead><tr><th></th>'+[0,1].map(i=>'<th><span class="dot" style="background:'+COL[i]+'"></span>'+esc(players[i]?nameOf(players[i],i):'—')+'</th>').join('')+'</tr></thead><tbody>';
+  h+=rows.map(([l,f])=>'<tr><td>'+l+'</td>'+[0,1].map(i=>'<td>'+(players[i]?S[i][f]:'–')+'</td>').join('')+'</tr>').join('');
+  h+='<tr class="tot"><td>Total</td>'+[0,1].map(i=>'<td>'+(players[i]?S[i].total:'–')+'</td>').join('')+'</tr></tbody></table>';
+  let bars='',lab='';
+  for(let d=0;d<S[0].days;d++){
+    bars+='<div class="d">'+[0,1].map(i=>{const val=S[i].daily[d];return players[i]&&val!==undefined?'<i style="height:'+(val/N*100)+'%;background:'+COL[i]+'"></i>':'<i style="background:transparent"></i>'}).join('')+'</div>';
+    lab+='<span>'+((d===0||(d+1)%5===0)?d+1:'')+'</span>';
+  }
+  h+='<h3>Hábitos cumplidos por día</h3><div class="chart">'+bars+'</div><div class="days">'+lab+'</div>';
+  h+='<div class="legend">'+[0,1].filter(i=>players[i]).map(i=>'<span><span class="dot" style="background:'+COL[i]+'"></span>'+esc(nameOf(players[i],i))+'</span>').join('')+'<span>Máximo '+N+' por día</span></div>';
+  let first=cur;Object.values(logs).forEach(m=>Object.keys(m).forEach(k=>{if(k.slice(0,7)<first)first=k.slice(0,7)}));
+  const hist=[];for(let m=addM(cur,-1);m>=first;m=addM(m,-1)){const x=verdict(m);if(x)hist.push([m,x])}
+  if(hist.length)h+='<h3>Meses anteriores</h3><ul class="hist">'+hist.map(([m,x])=>'<li><b>'+mName(m)+'</b><span>'+(x.w<0?'Empate':esc(nameOf(players[x.w],x.w)))+' · '+x.s[0].total+' a '+x.s[1].total+'</span></li>').join('')+'</ul>';
+  return h;
+}
+function vReglas(){
+  let h='<div class="card"><p><b>Código para invitar a tu rival</b></p><div class="code">'+esc(comp.code)+'</div><button class="btn" id="share">Compartir invitación</button></div>';
+  h+='<div class="card"><ul class="rules"><li>Cada hábito cumplido suma <b>1 punto</b>. Todos valen lo mismo; máximo '+N+' por día.</li><li>Cumplir el mismo hábito <b>7 días seguidos</b> da <b>+5</b>, y otra vez a los 14, 21, 28…</li><li>Si fallas un día, la racha de ese hábito vuelve a cero. Las rachas siguen de un mes al otro.</li><li>No hay día libre ni puntos negativos.</li><li>Gana el mes quien sume más. Desempate: más rachas de 7 días y luego más días perfectos.</li><li>El marcador parte en 0 cada día 1.</li><li>Cada uno marca lo suyo, hoy o ayer, con honestidad.</li></ul></div>';
+  h+='<p class="note">Para tenerla como app: en iPhone, abre este link en Safari, toca Compartir y luego "Agregar a inicio". En Android, menú de Chrome y luego "Instalar app".</p>';
+  return h+'<p><button class="link" id="logout">Cerrar sesión</button></p>';
+}
+function render(){
+  const r=$('#root');
+  if(!sb||!CFG.url||String(CFG.url).includes('__')){r.innerHTML='<div class="card"><p>Falta configurar la conexión con la base de datos (config.js).</p></div>';return}
+  if(screen==='loading'){r.innerHTML='<p class="note">Cargando…</p>';return}
+  if(screen==='auth'){r.innerHTML=vAuth();return}
+  if(screen==='setup'){r.innerHTML=vSetup();return}
+  r.innerHTML=vBoard()+'<section>'+(tab==='hoy'?vHoy():tab==='mes'?vMes():vReglas())+'</section>';
+}
+
+/* ---------- datos ---------- */
+function status(t){const s=$('#status');s.textContent=t;s.classList.toggle('on',!!t);if(t)setTimeout(()=>{if(s.textContent===t)s.classList.remove('on')},5000)}
+async function loadAll(){
+  const [m,l]=await Promise.all([
+    sb.from('members').select('user_id,alias,joined_at').eq('competition_id',comp.id).order('joined_at'),
+    sb.from('logs').select('user_id,day,habits').eq('competition_id',comp.id).gte('day',addD(today(),-400)).range(0,4999)
+  ]);
+  if(m.error||l.error)throw (m.error||l.error);
+  players=m.data.map(x=>({id:x.user_id,alias:x.alias})).slice(0,2);
+  logs={};l.data.forEach(setLog);
+}
+function setLog(r){(logs[r.user_id]=logs[r.user_id]||{})[r.day]=r.habits||[]}
+async function boot(){
+  if(chan){sb.removeChannel(chan);chan=null}
+  comp=null;players=[];logs={};dirty={};
+  const {data,error}=await sb.from('members').select('competition_id').eq('user_id',me).limit(1);
+  if(error){screen='setup';setupErr='No se pudo conectar: '+error.message;render();return}
+  if(!data.length){screen='setup';render();return}
+  const c=await sb.from('competitions').select('id,name,code').eq('id',data[0].competition_id).single();
+  if(c.error){screen='setup';setupErr=c.error.message;render();return}
+  comp=c.data;
+  try{await loadAll()}catch(e){status('No se pudieron cargar los datos.')}
+  screen='app';render();
+  chan=sb.channel('comp-'+comp.id)
+    .on('postgres_changes',{event:'*',schema:'public',table:'logs',filter:'competition_id=eq.'+comp.id},p=>{
+      const r=p.new;if(!r||!r.user_id)return;
+      if(r.user_id===me&&(dirty[r.day]||pend.has(r.day)))return;
+      setLog(r);render();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'members',filter:'competition_id=eq.'+comp.id},()=>{loadAll().then(render).catch(()=>{})})
+    .subscribe();
+}
+async function refresh(){if(screen==='app'&&comp&&!busy&&!pend.size){try{await loadAll();render()}catch(e){}}}
+
+let busy=false,timer=null;const pend=new Set();
+function queue(k){pend.add(k);clearTimeout(timer);timer=setTimeout(flush,500)}
+async function flush(){
+  timer=null;
+  if(busy){timer=setTimeout(flush,300);return}
+  if(!pend.size)return;
+  busy=true;const ks=[...pend];pend.clear();
+  const rows=ks.map(k=>({competition_id:comp.id,user_id:me,day:k,habits:dirty[k],updated_at:new Date().toISOString()}));
+  const {error}=await sb.from('logs').upsert(rows,{onConflict:'competition_id,user_id,day'});
+  if(error){
+    status(/row-level|policy/i.test(error.message)?'Solo puedes marcar hoy o ayer.':'No se pudo guardar. Revisa tu conexión.');
+    ks.forEach(k=>delete dirty[k]);render();
+  }else ks.forEach(k=>{if(!pend.has(k)){setLog({user_id:me,day:k,habits:dirty[k]});delete dirty[k]}});
+  busy=false;if(pend.size&&!timer)flush();
+}
+
+/* ---------- eventos ---------- */
+const errEs=m=>{
+  if(/Invalid login/i.test(m))return 'Correo o contraseña incorrectos.';
+  if(/not confirmed/i.test(m))return 'Primero confirma tu correo con el enlace que te enviamos.';
+  if(/already registered/i.test(m))return 'Ese correo ya tiene cuenta. Ingresa con tu contraseña.';
+  if(/at least 6/i.test(m))return 'La contraseña debe tener al menos 6 caracteres.';
+  if(/rate limit/i.test(m))return 'Demasiados intentos. Espera unos minutos.';
+  return m;
+};
+document.addEventListener('click',async e=>{
+  const t=e.target.closest('#tabs button');if(t){tab=t.dataset.t;render();window.scrollTo(0,0);return}
+  const d=e.target.closest('#seg button');if(d){day=d.dataset.d;render();return}
+  const m=e.target.closest('[data-m]');if(m){authMode=m.dataset.m;authMsg='';render();return}
+  if(e.target.closest('#prev')){ym=addM(ym,-1);render();return}
+  const nx=e.target.closest('#next');if(nx&&!nx.disabled){ym=addM(ym,1);render();return}
+  if(e.target.closest('#logout')){await sb.auth.signOut();return}
+  if(e.target.closest('#share')){
+    const txt='Te desafío a la competencia de buenos hábitos. Entra a '+location.origin+location.pathname+' , crea tu cuenta y únete con el código '+comp.code;
+    try{if(navigator.share){await navigator.share({title:'Competencia de hábitos',text:txt});return}}catch(er){if(er&&er.name==='AbortError')return}
+    try{await navigator.clipboard.writeText(txt);status('Invitación copiada. Pégala en WhatsApp.')}catch(er){status('Código: '+comp.code)}
+  }
+});
+document.addEventListener('change',e=>{
+  const c=e.target.closest('input[data-h]');if(!c)return;
+  const p=mine();if(!p)return;const k=curKey(),id=c.dataset.h;
+  let a=doneOn(p,k).slice();a=c.checked?[...new Set([...a,id])]:a.filter(x=>x!==id);
+  dirty[k]=a;const y=window.scrollY;render();window.scrollTo(0,y);queue(k);
+});
+document.addEventListener('submit',async e=>{
+  e.preventDefault();const f=e.target,b=f.querySelector('button[type=submit]');if(b)b.disabled=true;
+  try{
+    if(f.id==='authf'){
+      const em=$('#em')?$('#em').value.trim():'',pw=$('#pw')?$('#pw').value:'';
+      let r;
+      if(authMode==='signup'){
+        r=await sb.auth.signUp({email:em,password:pw,options:{emailRedirectTo:location.origin+location.pathname}});
+        if(!r.error&&!r.data.session){authMsg='Listo. Te enviamos un correo para confirmar tu cuenta; ábrelo y luego ingresa aquí.';authErr=false;authMode='login';render();return}
+      }else if(authMode==='reset'){
+        r=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname});
+        if(!r.error){authMsg='Te enviamos un correo con un enlace para cambiar tu contraseña.';authErr=false;authMode='login';render();return}
+      }else if(authMode==='newpass'){
+        r=await sb.auth.updateUser({password:pw});
+        if(!r.error){authMode='login';status('Contraseña actualizada.');bootedFor=null;onSession(r.data.user?{user:r.data.user}:null);return}
+      }else r=await sb.auth.signInWithPassword({email:em,password:pw});
+      if(r.error){authMsg=errEs(r.error.message);authErr=true;render()}
+      return;
+    }
+    if(f.id==='createf'){
+      const {error}=await sb.rpc('create_competition',{p_name:'Competencia de hábitos',p_alias:$('#ca').value});
+      if(error){setupErr=error.message;render();return}
+      setupErr='';tab='reglas';await boot();return;
+    }
+    if(f.id==='joinf'){
+      const {error}=await sb.rpc('join_competition',{p_code:$('#jc').value,p_alias:$('#ja').value});
+      if(error){setupErr=error.message;render();return}
+      setupErr='';tab='hoy';await boot();return;
+    }
+  }catch(er){status('Algo falló. Revisa tu conexión.')}
+  finally{if(b&&document.body.contains(b))b.disabled=false}
+});
+function onSession(s){
+  if(authMode==='newpass'&&s){screen='auth';render();return}
+  const uid=s&&s.user?s.user.id:null;
+  if(uid===bootedFor&&screen!=='loading')return;
+  bootedFor=uid;me=uid;
+  if(!uid){if(chan){sb.removeChannel(chan);chan=null}comp=null;players=[];logs={};screen='auth';render();return}
+  boot();
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(today()!==lastDay){lastDay=today();ym=lastDay.slice(0,7);render()}refresh()}});
+setInterval(()=>{if(today()!==lastDay){lastDay=today();ym=lastDay.slice(0,7);render()}},60000);
+
+render();
+if(sb){
+  sb.auth.onAuthStateChange((ev,s)=>{
+    if(ev==='PASSWORD_RECOVERY'){authMode='newpass';authMsg='';screen='auth';render();return}
+    if(ev==='TOKEN_REFRESHED'||ev==='USER_UPDATED')return;
+    setTimeout(()=>onSession(s),0);
+  });
+}
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
