@@ -100,9 +100,9 @@ tr.tot td{font-weight:800;font-size:18px}
 <script>
 {
 const CATS=[
-["Sueño y rutina",["Levantarse a las 7:00 o antes","Acostarse antes de las 00:00","Dormir 7 horas o más","No usar el celular los primeros 30 min del día","No usar pantallas 30 min antes de dormir","Hacer la cama al levantarse"]],
-["Alimentación: evitar",["Sin pan","Sin frituras","Sin dulces ni postres","Sin bebidas azucaradas ni jugos en caja","Sin comida rápida ni delivery","Sin snacks procesados","No comer después de las 21:00"]],
-["Alimentación: sumar",["Tomar 2 litros de agua","Comer 5 porciones de frutas o verduras","Tomar desayuno","Cocinar en casa","Comer proteína en cada comida"]],
+["Sueño y rutina",["Levantarse a las 7:00 o antes","Dormirse a las 00:00 o antes","Dormir 7 horas o más","No usar el celular los primeros 30 min del día","No usar pantallas 30 min antes de dormir","Hacer la cama al levantarse"]],
+["Alimentación: evitar",["No exceder la porción de pan","Sin frituras","Sin dulces ni postres","Sin bebidas azucaradas ni jugos en caja","Sin comida rápida ni delivery","Sin snacks procesados","No comer después de las 21:00"]],
+["Alimentación: sumar",["Tomar 2 litros de agua","Comer 3 porciones de frutas o verduras","Tomar desayuno","Cocinar en casa","Comer proteína en cada comida"]],
 ["Actividad física",["Hacer deporte o ir al gimnasio (30+ min)","Caminar 10.000 pasos","Estirar o hacer yoga (10+ min)","Usar escaleras en vez de ascensor","Ir caminando o en bici en vez de en auto"]],
 ["Mente y bienestar",["Meditar o respirar 10 min","Escribir un diario o 3 agradecimientos","Leer 20 páginas o 20 min","Tomar sol o estar al aire libre 15 min"]],
 ["Vida digital",["Menos de 2 horas de redes sociales","Sin series ni videos antes de dormir","Celular fuera de la mesa al comer"]],
@@ -114,7 +114,11 @@ const H=[];CATS.forEach(([c,l])=>l.forEach(t=>H.push({id:'h'+(H.length+1),t,c}))
 const N=H.length,VALID=new Set(H.map(h=>h.id)),BONUS=5,COL=['var(--a)','var(--b)'];
 /* Penalizaciones: si se marca, resta PEN puntos ese día y desmarca el hábito "Sin ..." asociado */
 const PEN=2,P=[{id:'p1',t:'Tomé bebida gaseosa',h:'h10'},{id:'p2',t:'Comí frituras',h:'h8'},{id:'p3',t:'Comí dulces o algo azucarado',h:'h9'}];
-const PVALID=new Set(P.map(x=>x.id)),PAIR={};P.forEach(x=>{PAIR[x.id]=x.h;PAIR[x.h]=x.id});
+const PVALID=new Set(P.map(x=>x.id)),EXCL={};P.forEach(x=>{EXCL[x.id]=[x.h];EXCL[x.h]=[x.id]});
+/* Fin de semana y festivos: levantarse antes de las 9:00 = +2, entre 9:00 y 10:00 = +1 (reemplaza a h1, que solo aplica de lunes a viernes) */
+const W=[{id:'w2',t:'Levantarse antes de las 9:00',pts:2},{id:'w1',t:'Levantarse entre las 9:00 y las 10:00',pts:1}];
+const WVALID=new Set(W.map(x=>x.id));EXCL.w2=['w1','h1'];EXCL.w1=['w2','h1'];
+const FERIADOS=new Set(['2026-12-08','2026-12-25','2027-01-01','2027-03-26','2027-03-27','2027-05-01','2027-05-21','2027-06-21','2027-06-28','2027-07-16','2027-08-15','2027-09-17','2027-09-18','2027-09-19','2027-10-11','2027-10-31','2027-11-01','2027-12-08','2027-12-25']);
 const MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const $=s=>document.querySelector(s);
 const pad=n=>String(n).padStart(2,'0');
@@ -122,6 +126,7 @@ const key=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const parse=k=>{const[y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d)};
 const addD=(k,n)=>{const d=parse(k);d.setDate(d.getDate()+n);return key(d)};
 const today=()=>key(new Date());
+const isRest=k=>{const w=parse(k).getDay();return w===0||w===6||FERIADOS.has(k)};
 const mName=ym=>{const[y,m]=ym.split('-').map(Number);return MES[m-1]+' '+y};
 const addM=(ym,n)=>{const[y,m]=ym.split('-').map(Number);const d=new Date(y,m-1+n,1);return d.getFullYear()+'-'+pad(d.getMonth()+1)};
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -138,17 +143,22 @@ const nameOf=(p,i)=>(p&&p.alias)||('Jugador '+(i+1));
 const mine=()=>players.find(p=>p.id===me);
 function doneOn(p,k){
   if(p.id===me&&dirty[k])return dirty[k];
-  const a=(logs[p.id]||{})[k];return Array.isArray(a)?a.filter(x=>VALID.has(x)||PVALID.has(x)):[];
+  const a=(logs[p.id]||{})[k];return Array.isArray(a)?a.filter(x=>VALID.has(x)||PVALID.has(x)||WVALID.has(x)):[];
 }
-function streakAt(p,id,k){let s=0;while(s<400&&doneOn(p,k).includes(id)){s++;k=addD(k,-1)}return s}
+function dayInfo(a,k){
+  const hs=new Set(a.filter(x=>VALID.has(x)));let wake=0;
+  if(isRest(k)){wake=a.includes('w2')||hs.has('h1')?2:a.includes('w1')?1:0;hs.delete('h1');if(wake)hs.add('h1')}
+  const pts=hs.size+(wake?wake-1:0);
+  return{hs,wake,pts,pen:new Set(a.filter(x=>PVALID.has(x))).size};
+}
+function streakAt(p,id,k){let s=0;while(s<400&&dayInfo(doneOn(p,k),k).hs.has(id)){s++;k=addD(k,-1)}return s}
 function stats(p,m){
   const[y,mo]=m.split('-').map(Number),last=new Date(y,mo,0).getDate(),t=today(),dates=[];
   for(let d=1;d<=last;d++){const k=m+'-'+pad(d);if(k>t)break;dates.push(k)}
   const r={base:0,bonus:0,pen:0,slips:0,total:0,streaks:0,perfect:0,daily:[],days:last};
   if(!p)return r;
-  const all=dates.map(k=>doneOn(p,k)),sets=all.map(a=>new Set(a.filter(x=>VALID.has(x))));
-  sets.forEach(s=>{r.base+=s.size;r.daily.push(s.size);if(s.size===N)r.perfect++});
-  all.forEach(a=>{r.slips+=new Set(a.filter(x=>PVALID.has(x))).size});r.pen=r.slips*PEN;
+  const info=dates.map(k=>dayInfo(doneOn(p,k),k)),sets=info.map(d=>d.hs);
+  info.forEach(d=>{r.base+=d.pts;r.daily.push(d.pts);if(d.hs.size===N)r.perfect++;r.slips+=d.pen});r.pen=r.slips*PEN;
   if(dates.length)H.forEach(h=>{
     let s=streakAt(p,h.id,addD(m+'-01',-1));
     sets.forEach(set=>{if(set.has(h.id)){s++;if(s%7===0){r.bonus+=BONUS;r.streaks++}}else s=0});
@@ -199,16 +209,22 @@ function vBoard(){
 function curKey(){return day==='hoy'?today():addD(today(),-1)}
 function vHoy(){
   const p=mine();if(!p)return '<div class="card"><p>Cargando…</p></div>';
-  const i=players.indexOf(p),k=curKey(),done=new Set(doneOn(p,k)),n=[...done].filter(x=>VALID.has(x)).length,pn=P.filter(x=>done.has(x.id)).length,dt=parse(k);
+  const i=players.indexOf(p),k=curKey(),done=new Set(doneOn(p,k)),di=dayInfo([...done],k),rest=isRest(k),n=di.hs.size,pn=P.filter(x=>done.has(x.id)).length,dt=parse(k);
   let h='<div style="--me:'+COL[i]+'"><div class="seg" id="seg"><button data-d="hoy" class="'+(day==='hoy'?'on':'')+'">Hoy</button><button data-d="ayer" class="'+(day==='ayer'?'on':'')+'">Ayer</button></div>';
   h+='<div class="prog"><span>'+(day==='hoy'?'Hoy':'Ayer')+', '+dt.getDate()+' de '+MES[dt.getMonth()]+'</span><span><b>'+n+'</b> / '+N+'</span></div><div class="bar"><i style="width:'+(n/N*100)+'%"></i></div>';
-  h+='<p class="note">Puedes marcar o corregir hoy y ayer.</p>';
+  h+='<p class="note">Puedes marcar o corregir hoy y ayer.'+(rest?' '+(day==='hoy'?'Hoy':'Ayer')+' es fin de semana o festivo: levantarte antes de las 9:00 suma 2 y entre las 9:00 y las 10:00 suma 1.':'')+'</p>';
   h+='<div class="pen"><h3>¿Caíste? Resta '+PEN+' puntos cada una'+(pn?' · <span class="minus">−'+pn*PEN+'</span>':'')+'</h3>';
   P.forEach(x=>{h+='<label class="row"><input type="checkbox" data-h="'+x.id+'"'+(done.has(x.id)?' checked':'')+'><span>'+esc(x.t)+'</span></label>'});
   h+='</div>';
   CATS.forEach(([c])=>{
     h+='<h3>'+esc(c)+'</h3>';
     H.filter(x=>x.c===c).forEach(x=>{
+      if(x.id==='h1'&&rest){
+        const st=di.wake?streakAt(p,'h1',k):streakAt(p,'h1',addD(k,-1)),hit=di.wake&&st%7===0;
+        W.forEach((w,j)=>{const on=di.wake===w.pts,showTag=st>=2&&(on||(!di.wake&&j===0));
+          h+='<label class="row"><input type="checkbox" data-h="'+w.id+'"'+(on?' checked':'')+'><span>'+esc(w.t)+' <b>+'+w.pts+'</b></span>'+(showTag?'<span class="tag'+(hit?' hot':'')+'">racha '+st+(hit?' · +5':'')+'</span>':'')+'</label>'});
+        return;
+      }
       const on=done.has(x.id),st=on?streakAt(p,x.id,k):streakAt(p,x.id,addD(k,-1)),hit=on&&st%7===0;
       const tag=st>=2?'<span class="tag'+(hit?' hot':'')+'">racha '+st+(hit?' · +5':'')+'</span>':'';
       h+='<label class="row"><input type="checkbox" data-h="'+x.id+'"'+(on?' checked':'')+'><span>'+esc(x.t)+'</span>'+tag+'</label>';
@@ -227,11 +243,11 @@ function vMes(){
   h+='<tr class="tot"><td>Total</td>'+[0,1].map(i=>'<td>'+(players[i]?S[i].total:'–')+'</td>').join('')+'</tr></tbody></table>';
   let bars='',lab='';
   for(let d=0;d<S[0].days;d++){
-    bars+='<div class="d">'+[0,1].map(i=>{const val=S[i].daily[d];return players[i]&&val!==undefined?'<i style="height:'+(val/N*100)+'%;background:'+COL[i]+'"></i>':'<i style="background:transparent"></i>'}).join('')+'</div>';
+    bars+='<div class="d">'+[0,1].map(i=>{const val=S[i].daily[d];return players[i]&&val!==undefined?'<i style="height:'+Math.min(100,val/N*100)+'%;background:'+COL[i]+'"></i>':'<i style="background:transparent"></i>'}).join('')+'</div>';
     lab+='<span>'+((d===0||(d+1)%5===0)?d+1:'')+'</span>';
   }
   h+='<h3>Hábitos cumplidos por día</h3><div class="chart">'+bars+'</div><div class="days">'+lab+'</div>';
-  h+='<div class="legend">'+[0,1].filter(i=>players[i]).map(i=>'<span><span class="dot" style="background:'+COL[i]+'"></span>'+esc(nameOf(players[i],i))+'</span>').join('')+'<span>Máximo '+N+' por día</span></div>';
+  h+='<div class="legend">'+[0,1].filter(i=>players[i]).map(i=>'<span><span class="dot" style="background:'+COL[i]+'"></span>'+esc(nameOf(players[i],i))+'</span>').join('')+'<span>Máximo '+N+' por día ('+(N+1)+' fin de semana y festivos)</span></div>';
   let first=cur;Object.values(logs).forEach(m=>Object.keys(m).forEach(k=>{if(k.slice(0,7)<first)first=k.slice(0,7)}));
   const hist=[];for(let m=addM(cur,-1);m>=first;m=addM(m,-1)){const x=verdict(m);if(x)hist.push([m,x])}
   if(hist.length)h+='<h3>Meses anteriores</h3><ul class="hist">'+hist.map(([m,x])=>'<li><b>'+mName(m)+'</b><span>'+(x.w<0?'Empate':esc(nameOf(players[x.w],x.w)))+' · '+x.s[0].total+' a '+x.s[1].total+'</span></li>').join('')+'</ul>';
@@ -239,7 +255,7 @@ function vMes(){
 }
 function vReglas(){
   let h='<div class="card"><p><b>Código para invitar a tu rival</b></p><div class="code">'+esc(comp.code)+'</div><button class="btn" id="share">Compartir invitación</button></div>';
-  h+='<div class="card"><ul class="rules"><li>Cada hábito cumplido suma <b>1 punto</b>. Todos valen lo mismo; máximo '+N+' por día.</li><li>Cumplir el mismo hábito <b>7 días seguidos</b> da <b>+5</b>, y otra vez a los 14, 21, 28…</li><li>Si fallas un día, la racha de ese hábito vuelve a cero. Las rachas siguen de un mes al otro.</li><li><b>Castigos:</b> tomar bebida gaseosa, comer frituras o comer dulces o algo azucarado <b>resta '+PEN+' puntos</b> cada uno, por día. Al marcarlo se desmarca el hábito "Sin…" correspondiente y se corta su racha.</li><li>No hay día libre.</li><li>Gana el mes quien sume más. Desempate: más rachas de 7 días y luego más días perfectos.</li><li>El marcador parte en 0 cada día 1.</li><li>Cada uno marca lo suyo, hoy o ayer, con honestidad.</li></ul></div>';
+  h+='<div class="card"><ul class="rules"><li>Cada hábito cumplido suma <b>1 punto</b>. Todos valen lo mismo; máximo '+N+' por día de lunes a viernes.</li><li><b>Fin de semana y festivos:</b> en vez de levantarse a las 7:00, levantarse antes de las 9:00 suma <b>2 puntos</b> y entre las 9:00 y las 10:00 suma <b>1 punto</b>. Cualquiera de las dos mantiene la racha de levantarse.</li><li>Cumplir el mismo hábito <b>7 días seguidos</b> da <b>+5</b>, y otra vez a los 14, 21, 28…</li><li>Si fallas un día, la racha de ese hábito vuelve a cero. Las rachas siguen de un mes al otro.</li><li><b>Castigos:</b> tomar bebida gaseosa, comer frituras o comer dulces o algo azucarado <b>resta '+PEN+' puntos</b> cada uno, por día. Al marcarlo se desmarca el hábito "Sin…" correspondiente y se corta su racha.</li><li>No hay día libre.</li><li>Gana el mes quien sume más. Desempate: más rachas de 7 días y luego más días perfectos.</li><li>El marcador parte en 0 cada día 1.</li><li>Cada uno marca lo suyo, hoy o ayer, con honestidad.</li></ul></div>';
   h+='<p class="note">Para tenerla como app: en iPhone, abre este link en Safari, toca Compartir y luego "Agregar a inicio". En Android, menú de Chrome y luego "Instalar app".</p>';
   return h+'<p><button class="link" id="logout">Cerrar sesión</button></p>';
 }
@@ -327,7 +343,7 @@ document.addEventListener('click',async e=>{
 document.addEventListener('change',e=>{
   const c=e.target.closest('input[data-h]');if(!c)return;
   const p=mine();if(!p)return;const k=curKey(),id=c.dataset.h;
-  let a=doneOn(p,k).slice();a=c.checked?[...new Set([...a,id])].filter(x=>x!==PAIR[id]):a.filter(x=>x!==id);
+  let a=doneOn(p,k).slice();a=c.checked?[...new Set([...a,id])].filter(x=>!(EXCL[id]||[]).includes(x)):a.filter(x=>x!==id);
   dirty[k]=a;const y=window.scrollY;render();window.scrollTo(0,y);queue(k);
 });
 document.addEventListener('submit',async e=>{
