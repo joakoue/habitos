@@ -48,6 +48,11 @@ h3{font-size:16px;margin:24px 0 2px}
 .row span{flex:1}
 .tag{font-size:13px;color:var(--mute);white-space:nowrap}
 .tag.hot{color:var(--me);font-weight:700}
+.pen{border:2px solid var(--err);border-radius:16px;padding:4px 14px 2px;margin:16px 0 4px}
+.pen h3{margin:10px 0 0;color:var(--err)}
+.pen .row:last-child{border-bottom:0}
+.pen .row input:checked{background:var(--err);border-color:var(--err)}
+.minus{color:var(--err);font-weight:800}
 .card{background:var(--card);border-radius:16px;padding:18px;margin:12px 0}
 .card p{margin:0 0 10px}
 label.f{display:block;font-weight:600;font-size:14px}
@@ -107,6 +112,9 @@ const CATS=[
 ];
 const H=[];CATS.forEach(([c,l])=>l.forEach(t=>H.push({id:'h'+(H.length+1),t,c})));
 const N=H.length,VALID=new Set(H.map(h=>h.id)),BONUS=5,COL=['var(--a)','var(--b)'];
+/* Penalizaciones: si se marca, resta PEN puntos ese día y desmarca el hábito "Sin ..." asociado */
+const PEN=2,P=[{id:'p1',t:'Tomé bebida gaseosa',h:'h10'},{id:'p2',t:'Comí frituras',h:'h8'},{id:'p3',t:'Comí dulces o algo azucarado',h:'h9'}];
+const PVALID=new Set(P.map(x=>x.id)),PAIR={};P.forEach(x=>{PAIR[x.id]=x.h;PAIR[x.h]=x.id});
 const MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const $=s=>document.querySelector(s);
 const pad=n=>String(n).padStart(2,'0');
@@ -130,21 +138,22 @@ const nameOf=(p,i)=>(p&&p.alias)||('Jugador '+(i+1));
 const mine=()=>players.find(p=>p.id===me);
 function doneOn(p,k){
   if(p.id===me&&dirty[k])return dirty[k];
-  const a=(logs[p.id]||{})[k];return Array.isArray(a)?a.filter(x=>VALID.has(x)):[];
+  const a=(logs[p.id]||{})[k];return Array.isArray(a)?a.filter(x=>VALID.has(x)||PVALID.has(x)):[];
 }
 function streakAt(p,id,k){let s=0;while(s<400&&doneOn(p,k).includes(id)){s++;k=addD(k,-1)}return s}
 function stats(p,m){
   const[y,mo]=m.split('-').map(Number),last=new Date(y,mo,0).getDate(),t=today(),dates=[];
   for(let d=1;d<=last;d++){const k=m+'-'+pad(d);if(k>t)break;dates.push(k)}
-  const r={base:0,bonus:0,total:0,streaks:0,perfect:0,daily:[],days:last};
+  const r={base:0,bonus:0,pen:0,slips:0,total:0,streaks:0,perfect:0,daily:[],days:last};
   if(!p)return r;
-  const sets=dates.map(k=>new Set(doneOn(p,k)));
+  const all=dates.map(k=>doneOn(p,k)),sets=all.map(a=>new Set(a.filter(x=>VALID.has(x))));
   sets.forEach(s=>{r.base+=s.size;r.daily.push(s.size);if(s.size===N)r.perfect++});
+  all.forEach(a=>{r.slips+=new Set(a.filter(x=>PVALID.has(x))).size});r.pen=r.slips*PEN;
   if(dates.length)H.forEach(h=>{
     let s=streakAt(p,h.id,addD(m+'-01',-1));
     sets.forEach(set=>{if(set.has(h.id)){s++;if(s%7===0){r.bonus+=BONUS;r.streaks++}}else s=0});
   });
-  r.total=r.base+r.bonus;return r;
+  r.total=r.base+r.bonus-r.pen;return r;
 }
 function cmp(a,b){return (a.total-b.total)||(a.streaks-b.streaks)||(a.perfect-b.perfect)}
 function verdict(m){
@@ -178,7 +187,7 @@ function vBoard(){
   let h='<h1>'+esc(comp?comp.name:'Competencia')+' · '+mName(cur)+'</h1><section class="board" aria-label="Marcador del mes">';
   [0,1].forEach(i=>{
     const p=players[i],s=stats(p,cur);
-    h+='<div class="side '+'ab'[i]+'"><div class="nm">'+esc(p?nameOf(p,i):'Esperando rival')+'</div><div class="pts">'+(p?s.total:'–')+'</div><div class="sub">'+(p?s.base+' hábitos · +'+s.bonus+' bonus':'Comparte el código')+'</div>'+(v&&v.w===i?'<span class="crown">Va ganando</span>':'')+'</div>';
+    h+='<div class="side '+'ab'[i]+'"><div class="nm">'+esc(p?nameOf(p,i):'Esperando rival')+'</div><div class="pts">'+(p?s.total:'–')+'</div><div class="sub">'+(p?s.base+' hábitos · +'+s.bonus+' bonus'+(s.pen?' · −'+s.pen+' castigo':''):'Comparte el código')+'</div>'+(v&&v.w===i?'<span class="crown">Va ganando</span>':'')+'</div>';
   });
   h+='</section><div class="lead">';
   if(!v)h+='Invita a tu rival con el código <b>'+esc(comp?comp.code:'')+'</b> (lo encuentras en Reglas).';
@@ -190,10 +199,13 @@ function vBoard(){
 function curKey(){return day==='hoy'?today():addD(today(),-1)}
 function vHoy(){
   const p=mine();if(!p)return '<div class="card"><p>Cargando…</p></div>';
-  const i=players.indexOf(p),k=curKey(),done=new Set(doneOn(p,k)),n=done.size,dt=parse(k);
+  const i=players.indexOf(p),k=curKey(),done=new Set(doneOn(p,k)),n=[...done].filter(x=>VALID.has(x)).length,pn=P.filter(x=>done.has(x.id)).length,dt=parse(k);
   let h='<div style="--me:'+COL[i]+'"><div class="seg" id="seg"><button data-d="hoy" class="'+(day==='hoy'?'on':'')+'">Hoy</button><button data-d="ayer" class="'+(day==='ayer'?'on':'')+'">Ayer</button></div>';
   h+='<div class="prog"><span>'+(day==='hoy'?'Hoy':'Ayer')+', '+dt.getDate()+' de '+MES[dt.getMonth()]+'</span><span><b>'+n+'</b> / '+N+'</span></div><div class="bar"><i style="width:'+(n/N*100)+'%"></i></div>';
   h+='<p class="note">Puedes marcar o corregir hoy y ayer.</p>';
+  h+='<div class="pen"><h3>¿Caíste? Resta '+PEN+' puntos cada una'+(pn?' · <span class="minus">−'+pn*PEN+'</span>':'')+'</h3>';
+  P.forEach(x=>{h+='<label class="row"><input type="checkbox" data-h="'+x.id+'"'+(done.has(x.id)?' checked':'')+'><span>'+esc(x.t)+'</span></label>'});
+  h+='</div>';
   CATS.forEach(([c])=>{
     h+='<h3>'+esc(c)+'</h3>';
     H.filter(x=>x.c===c).forEach(x=>{
@@ -209,9 +221,9 @@ function vMes(){
   let h='<div class="mhead"><button id="prev" aria-label="Mes anterior">‹</button><b>'+mName(ym)+'</b><button id="next" aria-label="Mes siguiente"'+(ym>=cur?' disabled':'')+'>›</button></div>';
   const S=[0,1].map(i=>stats(players[i],ym));
   if(v)h+='<div class="card"><p><b>'+(v.w<0?'Empate total':(ym<cur?'Ganador: ':'Va ganando: ')+esc(nameOf(players[v.w],v.w)))+'</b></p><p class="note">Desempate: más rachas de 7 días y luego más días perfectos.</p></div>';
-  const rows=[['Puntos por hábitos','base'],['Bonus por racha','bonus'],['Rachas de 7 días','streaks'],['Días perfectos ('+N+'/'+N+')','perfect']];
+  const rows=[['Puntos por hábitos','base'],['Bonus por racha','bonus'],['Castigos (gaseosa, frituras, dulces)','pen'],['Rachas de 7 días','streaks'],['Días perfectos ('+N+'/'+N+')','perfect']];
   h+='<table><thead><tr><th></th>'+[0,1].map(i=>'<th><span class="dot" style="background:'+COL[i]+'"></span>'+esc(players[i]?nameOf(players[i],i):'—')+'</th>').join('')+'</tr></thead><tbody>';
-  h+=rows.map(([l,f])=>'<tr><td>'+l+'</td>'+[0,1].map(i=>'<td>'+(players[i]?S[i][f]:'–')+'</td>').join('')+'</tr>').join('');
+  h+=rows.map(([l,f])=>'<tr><td>'+l+'</td>'+[0,1].map(i=>'<td>'+(players[i]?(f==='pen'&&S[i][f]?'−'+S[i][f]:S[i][f]):'–')+'</td>').join('')+'</tr>').join('');
   h+='<tr class="tot"><td>Total</td>'+[0,1].map(i=>'<td>'+(players[i]?S[i].total:'–')+'</td>').join('')+'</tr></tbody></table>';
   let bars='',lab='';
   for(let d=0;d<S[0].days;d++){
@@ -227,7 +239,7 @@ function vMes(){
 }
 function vReglas(){
   let h='<div class="card"><p><b>Código para invitar a tu rival</b></p><div class="code">'+esc(comp.code)+'</div><button class="btn" id="share">Compartir invitación</button></div>';
-  h+='<div class="card"><ul class="rules"><li>Cada hábito cumplido suma <b>1 punto</b>. Todos valen lo mismo; máximo '+N+' por día.</li><li>Cumplir el mismo hábito <b>7 días seguidos</b> da <b>+5</b>, y otra vez a los 14, 21, 28…</li><li>Si fallas un día, la racha de ese hábito vuelve a cero. Las rachas siguen de un mes al otro.</li><li>No hay día libre ni puntos negativos.</li><li>Gana el mes quien sume más. Desempate: más rachas de 7 días y luego más días perfectos.</li><li>El marcador parte en 0 cada día 1.</li><li>Cada uno marca lo suyo, hoy o ayer, con honestidad.</li></ul></div>';
+  h+='<div class="card"><ul class="rules"><li>Cada hábito cumplido suma <b>1 punto</b>. Todos valen lo mismo; máximo '+N+' por día.</li><li>Cumplir el mismo hábito <b>7 días seguidos</b> da <b>+5</b>, y otra vez a los 14, 21, 28…</li><li>Si fallas un día, la racha de ese hábito vuelve a cero. Las rachas siguen de un mes al otro.</li><li><b>Castigos:</b> tomar bebida gaseosa, comer frituras o comer dulces o algo azucarado <b>resta '+PEN+' puntos</b> cada uno, por día. Al marcarlo se desmarca el hábito "Sin…" correspondiente y se corta su racha.</li><li>No hay día libre.</li><li>Gana el mes quien sume más. Desempate: más rachas de 7 días y luego más días perfectos.</li><li>El marcador parte en 0 cada día 1.</li><li>Cada uno marca lo suyo, hoy o ayer, con honestidad.</li></ul></div>';
   h+='<p class="note">Para tenerla como app: en iPhone, abre este link en Safari, toca Compartir y luego "Agregar a inicio". En Android, menú de Chrome y luego "Instalar app".</p>';
   return h+'<p><button class="link" id="logout">Cerrar sesión</button></p>';
 }
@@ -315,7 +327,7 @@ document.addEventListener('click',async e=>{
 document.addEventListener('change',e=>{
   const c=e.target.closest('input[data-h]');if(!c)return;
   const p=mine();if(!p)return;const k=curKey(),id=c.dataset.h;
-  let a=doneOn(p,k).slice();a=c.checked?[...new Set([...a,id])]:a.filter(x=>x!==id);
+  let a=doneOn(p,k).slice();a=c.checked?[...new Set([...a,id])].filter(x=>x!==PAIR[id]):a.filter(x=>x!==id);
   dirty[k]=a;const y=window.scrollY;render();window.scrollTo(0,y);queue(k);
 });
 document.addEventListener('submit',async e=>{
