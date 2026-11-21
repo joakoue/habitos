@@ -53,6 +53,11 @@ h3{font-size:16px;margin:24px 0 2px}
 .pen .row:last-child{border-bottom:0}
 .pen .row input:checked{background:var(--err);border-color:var(--err)}
 .minus{color:var(--err);font-weight:800}
+.prow{cursor:default}
+.cnt{display:flex;align-items:center;gap:6px;flex:none}
+.cnt button{width:36px;height:36px;border-radius:10px;border:2px solid var(--err);background:transparent;color:var(--err);font-size:20px;font-weight:800;line-height:1;cursor:pointer;padding:0}
+.cnt button:disabled{opacity:.3;cursor:default}
+.cnt b{min-width:22px;text-align:center;font-size:18px}
 .card{background:var(--card);border-radius:16px;padding:18px;margin:12px 0}
 .card p{margin:0 0 10px}
 label.f{display:block;font-weight:600;font-size:14px}
@@ -103,7 +108,7 @@ tr.tot td{font-weight:800;font-size:18px}
 const RETO="Reto personal del mes";
 const CATS=[
 ["Sueño y rutina",[["h1","Levantarse a las 7:00 o antes"],["h2","Dormirse a las 00:00 o antes"],["h3","Dormir 7 horas o más"],["h4","No usar el celular los primeros 30 min del día"],["h5","No usar pantallas 30 min antes de dormir"],["h6","Hacer la cama al levantarse"]]],
-["Alimentación: evitar",[["h7","No exceder la porción de pan"],["h8","Sin frituras"],["h9","Sin dulces ni postres"],["h10","Sin bebidas azucaradas ni jugos en caja"],["h11","Sin comida rápida ni delivery"],["h12","Sin snacks procesados"],["h13","No comer después de las 21:00"]]],
+["Alimentación: evitar",[["h7","No exceder la porción de pan"],["h8","Sin frituras"],["h9","Sin dulces ni postres"],["h10","Sin bebidas azucaradas ni jugos en caja"],["h11","Sin comida rápida ni delivery"],["h12","Sin snacks procesados"],["h13","No comer después de las 21:00"],["h44","Sin aderezos (la mostaza sí vale)"],["h45","Sin embutidos"]]],
 ["Alimentación: sumar",[["h14","Tomar 2 litros de agua"],["h15","Comer 3 porciones de frutas o verduras"],["h16","Tomar desayuno"],["h17","Cocinar en casa"],["h18","Comer proteína en cada comida"]]],
 ["Actividad física",[["h19","Hacer deporte o ir al gimnasio (30+ min)"],["h20","Caminar 10.000 pasos"],["h21","Estirar o hacer yoga (10+ min)"],["h22","Usar escaleras en vez de ascensor"]]],
 ["Mente y bienestar",[["h25","Escribir un diario o 3 agradecimientos"],["h26","Leer 20 páginas o 20 min"],["h27","Tomar sol o estar al aire libre 15 min"]]],
@@ -116,14 +121,18 @@ const CATS=[
 const H=[];CATS.forEach(([c,l])=>l.forEach(([id,t])=>H.push({id,t,c})));
 const N=H.length,VALID=new Set(H.map(h=>h.id)),BONUS=5,COL=['var(--a)','var(--b)'];
 /* Hábitos eliminados el 17-11-2026: siguen sumando solo en los días anteriores, para no borrar puntos ya ganados */
-const CUT='2026-11-17',N_OLD=43,LEG=['h23','h24','h35','h37','h43'],LVALID=new Set(LEG),SIDS=[...H.map(h=>h.id),...LEG];
+const CUT='2026-11-17',N_OLD=43,ADD='2026-11-21',N_ADD=2,LEG=['h23','h24','h35','h37','h43'],LVALID=new Set(LEG),SIDS=[...H.map(h=>h.id),...LEG];
 /* Entrenamiento de 2 horas o más: vale 2 puntos (reemplaza a h19 ese día y mantiene su racha) */
 const G2={id:'g2',t:'Entrenar 2 horas o más',pts:2};
 /* Reto del mes: se guarda como "r:texto" dentro del registro del día en que se define; el primero del mes queda fijo */
 const RMAX=80;
-/* Penalizaciones: si se marca, resta PEN puntos ese día y desmarca el hábito "Sin ..." asociado */
-const PEN=2,P=[{id:'p1',t:'Tomé bebida gaseosa',h:'h10'},{id:'p2',t:'Comí frituras',h:'h8'},{id:'p3',t:'Comí dulces o algo azucarado',h:'h9'}];
-const PVALID=new Set(P.map(x=>x.id)),EXCL={};P.forEach(x=>{EXCL[x.id]=[x.h];EXCL[x.h]=[x.id]});
+/* Castigos lineales: 1 vez = -2, 2 veces = -3, 3 veces = -4... (PEN + veces - 1). Se guarda "p1" para 1 vez y "p1:n" para n veces.
+   Al marcar un castigo se desmarca el hábito "Sin ..." asociado */
+const PEN=2,PMAX=10,P=[{id:'p1',t:'Tomé bebida gaseosa',h:'h10'},{id:'p2',t:'Comí frituras',h:'h8'},{id:'p3',t:'Comí dulces o algo azucarado',h:'h9'}];
+const PVALID=new Set(P.map(x=>x.id)),PRE=/^p\d+:\d+$/,EXCL={};P.forEach(x=>{EXCL[x.id]=[x.h]});
+const penOf=x=>typeof x==='string'&&(PVALID.has(x)||(PRE.test(x)&&PVALID.has(x.split(':')[0])))?x.split(':')[0]:null;
+const penN=(a,id)=>{let n=0;a.forEach(x=>{if(penOf(x)===id)n=Math.max(n,x.includes(':')?Math.min(PMAX,Number(x.split(':')[1])||0):1)});return n};
+const penPts=n=>n>0?PEN+n-1:0;
 /* Fin de semana y festivos: levantarse antes de las 9:00 = +2, entre 9:00 y 10:00 = +1 (reemplaza a h1, que solo aplica de lunes a viernes) */
 const W=[{id:'w2',t:'Levantarse antes de las 9:00',pts:2},{id:'w1',t:'Levantarse entre las 9:00 y las 10:00',pts:1}];
 const WVALID=new Set(W.map(x=>x.id));EXCL.w2=['w1','h1'];EXCL.w1=['w2','h1'];
@@ -153,14 +162,14 @@ const nameOf=(p,i)=>(p&&p.alias)||('Jugador '+(i+1));
 const mine=()=>players.find(p=>p.id===me);
 function doneOn(p,k){
   if(p.id===me&&dirty[k])return dirty[k];
-  const a=(logs[p.id]||{})[k];return Array.isArray(a)?a.filter(x=>VALID.has(x)||PVALID.has(x)||WVALID.has(x)||x===G2.id||LVALID.has(x)||(typeof x==='string'&&x.startsWith('r:'))):[];
+  const a=(logs[p.id]||{})[k];return Array.isArray(a)?a.filter(x=>VALID.has(x)||penOf(x)||WVALID.has(x)||x===G2.id||LVALID.has(x)||(typeof x==='string'&&x.startsWith('r:'))):[];
 }
 function dayInfo(a,k){
   const old=k<CUT,hs=new Set(a.filter(x=>VALID.has(x)||(old&&LVALID.has(x))));let wake=0;
   if(isRest(k)){wake=a.includes('w2')||hs.has('h1')?2:a.includes('w1')?1:0;hs.delete('h1');if(wake)hs.add('h1')}
   const gym=a.includes(G2.id);if(gym)hs.add('h19');
   const pts=hs.size+(wake?wake-1:0)+(gym?G2.pts-1:0);
-  return{hs,wake,gym,pts,full:hs.size>=(old?N_OLD:N),pen:new Set(a.filter(x=>PVALID.has(x))).size};
+  return{hs,wake,gym,pts,full:hs.size>=(old?N_OLD:k<ADD?N-N_ADD:N),slips:P.reduce((t,x)=>t+penN(a,x.id),0),pen:P.reduce((t,x)=>t+penPts(penN(a,x.id)),0)};
 }
 /* Reto del mes de un jugador: el primero que definió en ese mes (no se puede cambiar hasta el mes siguiente) */
 function retoOf(p,m){
@@ -176,7 +185,7 @@ function stats(p,m){
   const r={base:0,bonus:0,pen:0,slips:0,total:0,streaks:0,perfect:0,daily:[],days:last};
   if(!p)return r;
   const info=dates.map(k=>dayInfo(doneOn(p,k),k)),sets=info.map(d=>d.hs);
-  info.forEach(d=>{r.base+=d.pts;r.daily.push(d.pts);if(d.full)r.perfect++;r.slips+=d.pen});r.pen=r.slips*PEN;
+  info.forEach(d=>{r.base+=d.pts;r.daily.push(d.pts);if(d.full)r.perfect++;r.slips+=d.slips;r.pen+=d.pen});
   if(dates.length)SIDS.forEach(id=>{
     let s=streakAt(p,id,addD(m+'-01',-1));
     sets.forEach(set=>{if(set.has(id)){s++;if(s%7===0){r.bonus+=BONUS;r.streaks++}}else s=0});
@@ -227,12 +236,12 @@ function vBoard(){
 function curKey(){return day==='hoy'?today():addD(today(),-1)}
 function vHoy(){
   const p=mine();if(!p)return '<div class="card"><p>Cargando…</p></div>';
-  const i=players.indexOf(p),k=curKey(),done=new Set(doneOn(p,k)),di=dayInfo([...done],k),rest=isRest(k),n=di.hs.size,pn=P.filter(x=>done.has(x.id)).length,dt=parse(k);
+  const i=players.indexOf(p),k=curKey(),done=new Set(doneOn(p,k)),di=dayInfo([...done],k),rest=isRest(k),n=di.hs.size,pn=di.pen,dt=parse(k);
   let h='<div style="--me:'+COL[i]+'"><div class="seg" id="seg"><button data-d="hoy" class="'+(day==='hoy'?'on':'')+'">Hoy</button><button data-d="ayer" class="'+(day==='ayer'?'on':'')+'">Ayer</button></div>';
   h+='<div class="prog"><span>'+(day==='hoy'?'Hoy':'Ayer')+', '+dt.getDate()+' de '+MES[dt.getMonth()]+'</span><span><b>'+n+'</b> / '+N+'</span></div><div class="bar"><i style="width:'+(n/N*100)+'%"></i></div>';
   h+='<p class="note">Puedes marcar o corregir hoy y ayer. Entrenar 2 horas o más suma 2 puntos.'+(rest?' '+(day==='hoy'?'Hoy':'Ayer')+' es fin de semana o festivo: levantarte antes de las 9:00 suma 2 y entre las 9:00 y las 10:00 suma 1.':'')+'</p>';
-  h+='<div class="pen"><h3>¿Caíste? Resta '+PEN+' puntos cada una'+(pn?' · <span class="minus">−'+pn*PEN+'</span>':'')+'</h3>';
-  P.forEach(x=>{h+='<label class="row"><input type="checkbox" data-h="'+x.id+'"'+(done.has(x.id)?' checked':'')+'><span>'+esc(x.t)+'</span></label>'});
+  h+='<div class="pen"><h3>¿Caíste? 1 vez −'+PEN+', 2 veces −'+penPts(2)+', 3 veces −'+penPts(3)+'…'+(pn?' · <span class="minus">−'+pn+'</span>':'')+'</h3>';
+  P.forEach(x=>{const c=penN([...done],x.id);h+='<div class="row prow"><span>'+esc(x.t)+(c?' <span class="minus">−'+penPts(c)+'</span>':'')+'</span><div class="cnt"><button type="button" data-p="'+x.id+'" data-v="-1" aria-label="Una vez menos"'+(c?'':' disabled')+'>−</button><b aria-live="polite">'+c+'</b><button type="button" data-p="'+x.id+'" data-v="1" aria-label="Una vez más"'+(c>=PMAX?' disabled':'')+'>+</button></div></div>'});
   h+='</div>';
   CATS.forEach(([c])=>{
     h+='<h3>'+esc(c)+'</h3>';
@@ -294,7 +303,7 @@ function vMes(){
 }
 function vReglas(){
   let h='<div class="card"><p><b>Código para invitar a tu rival</b></p><div class="code">'+esc(comp.code)+'</div><button class="btn" id="share">Compartir invitación</button></div>';
-  h+='<div class="card"><ul class="rules"><li>Cada hábito cumplido suma <b>1 punto</b>. Son '+N+' hábitos, incluido tu reto del mes.</li><li><b>Entrenamiento:</b> deporte o gimnasio de 30 min o más suma 1 punto; si entrenas <b>2 horas o más</b> suma <b>2 puntos</b>. Ambos mantienen la racha.</li><li><b>Reto personal del mes:</b> cada uno define el suyo y vale 1 punto por día cumplido. No se puede cambiar hasta que termine el mes; al empezar el mes siguiente puedes mantenerlo o elegir otro.</li><li><b>Fin de semana y festivos:</b> en vez de levantarse a las 7:00, levantarse antes de las 9:00 suma <b>2 puntos</b> y entre las 9:00 y las 10:00 suma <b>1 punto</b>. Cualquiera de las dos mantiene la racha de levantarse.</li><li>Cumplir el mismo hábito <b>7 días seguidos</b> da <b>+5</b>, y otra vez a los 14, 21, 28…</li><li>Si fallas un día, la racha de ese hábito vuelve a cero. Las rachas siguen de un mes al otro.</li><li><b>Castigos:</b> tomar bebida gaseosa, comer frituras o comer dulces o algo azucarado <b>resta '+PEN+' puntos</b> cada uno, por día. Al marcarlo se desmarca el hábito "Sin…" correspondiente y se corta su racha.</li><li>No hay día libre.</li><li>Gana el mes quien sume más. Desempate: más rachas de 7 días y luego más días perfectos.</li><li>El marcador parte en 0 cada día 1.</li><li>Cada uno marca lo suyo, hoy o ayer, con honestidad.</li></ul></div>';
+  h+='<div class="card"><ul class="rules"><li>Cada hábito cumplido suma <b>1 punto</b>. Son '+N+' hábitos, incluido tu reto del mes.</li><li><b>Entrenamiento:</b> deporte o gimnasio de 30 min o más suma 1 punto; si entrenas <b>2 horas o más</b> suma <b>2 puntos</b>. Ambos mantienen la racha.</li><li><b>Reto personal del mes:</b> cada uno define el suyo y vale 1 punto por día cumplido. No se puede cambiar hasta que termine el mes; al empezar el mes siguiente puedes mantenerlo o elegir otro.</li><li><b>Fin de semana y festivos:</b> en vez de levantarse a las 7:00, levantarse antes de las 9:00 suma <b>2 puntos</b> y entre las 9:00 y las 10:00 suma <b>1 punto</b>. Cualquiera de las dos mantiene la racha de levantarse.</li><li>Cumplir el mismo hábito <b>7 días seguidos</b> da <b>+5</b>, y otra vez a los 14, 21, 28…</li><li>Si fallas un día, la racha de ese hábito vuelve a cero. Las rachas siguen de un mes al otro.</li><li><b>Castigos:</b> tomar bebida gaseosa, comer frituras o comer dulces o algo azucarado resta según cuántas veces caíste ese día: <b>1 vez −2, 2 veces −3, 3 veces −4</b> y así (cada vez extra resta 1 más). Se cuenta por separado para cada castigo. Al marcarlo se desmarca el hábito "Sin…" correspondiente y se corta su racha.</li><li>No hay día libre.</li><li>Gana el mes quien sume más. Desempate: más rachas de 7 días y luego más días perfectos.</li><li>El marcador parte en 0 cada día 1.</li><li>Cada uno marca lo suyo, hoy o ayer, con honestidad.</li></ul></div>';
   h+='<p class="note">Para tenerla como app: en iPhone, abre este link en Safari, toca Compartir y luego "Agregar a inicio". En Android, menú de Chrome y luego "Instalar app".</p>';
   return h+'<p><button class="link" id="logout">Cerrar sesión</button></p>';
 }
@@ -373,6 +382,7 @@ document.addEventListener('click',async e=>{
   if(e.target.closest('#prev')){ym=addM(ym,-1);render();return}
   const nx=e.target.closest('#next');if(nx&&!nx.disabled){ym=addM(ym,1);render();return}
   if(e.target.closest('#logout')){await sb.auth.signOut();return}
+  const pb=e.target.closest('button[data-p]');if(pb&&!pb.disabled){setPen(pb.dataset.p,Number(pb.dataset.v));return}
   const kr=e.target.closest('#keepreto');if(kr){saveReto(kr.dataset.r);return}
   if(e.target.closest('#share')){
     const txt='Te desafío a la competencia de buenos hábitos. Entra a '+location.origin+location.pathname+' , crea tu cuenta y únete con el código '+comp.code;
@@ -383,9 +393,16 @@ document.addEventListener('click',async e=>{
 document.addEventListener('change',e=>{
   const c=e.target.closest('input[data-h]');if(!c)return;
   const p=mine();if(!p)return;const k=curKey(),id=c.dataset.h;
-  let a=doneOn(p,k).slice();a=c.checked?[...new Set([...a,id])].filter(x=>!(EXCL[id]||[]).includes(x)):a.filter(x=>x!==id);
+  let a=doneOn(p,k).slice();const px=P.find(x=>x.h===id);
+  a=c.checked?[...new Set([...a,id])].filter(x=>!(EXCL[id]||[]).includes(x)&&!(px&&penOf(x)===px.id)):a.filter(x=>x!==id);
   dirty[k]=a;const y=window.scrollY;render();window.scrollTo(0,y);queue(k);
 });
+function setPen(id,dv){
+  const p=mine();if(!p)return;const k=curKey(),x=P.find(y=>y.id===id);
+  let a=doneOn(p,k).filter(y=>penOf(y)!==id);const n=Math.max(0,Math.min(PMAX,penN(doneOn(p,k),id)+dv));
+  if(n){a.push(n===1?id:id+':'+n);a=a.filter(y=>y!==x.h)}
+  dirty[k]=a;const sy=window.scrollY;render();window.scrollTo(0,sy);queue(k);
+}
 function saveReto(t){
   const p=mine();if(!p)return;const k=curKey();t=String(t||'').replace(/\s+/g,' ').trim().slice(0,RMAX);
   if(!t){status('Escribe tu reto.');return}
